@@ -1,82 +1,238 @@
-import AppointmentForm from '../components/appointment/AppointmentForm';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const AppointmentPage = () => {
+  const [user, setUser] = useState<any>(null);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [appointmentDate, setAppointmentDate] = useState("");
+  const [selectedDept, setSelectedDept] = useState("");
+  const [additionalMsg, setAdditionalMsg] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (!userData) {
+      navigate("/login");
+      return;
+    }
+    setUser(JSON.parse(userData));
+    fetchDepartments();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchAppointments();
+    }
+  }, [user]);
+
+  const fetchDepartments = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/appointments/departments");
+      const data = await res.json();
+      setDepartments(data);
+    } catch (err) {
+      console.error("Failed to load departments:", err);
+    }
+  };
+
+  const fetchAppointments = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/appointments/user/${user.user_id}`);
+      const data = await res.json();
+      setAppointments(data);
+    } catch (err) {
+      console.error("Failed to load appointments:", err);
+    }
+  };
+
+  const handleBookAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedDept || !appointmentDate) {
+      setError("Please select department and date");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const res = await fetch("http://localhost:5000/api/appointments/book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: user.user_id,
+          department_id: parseInt(selectedDept),
+          appointment_date: appointmentDate,
+          additional_message: additionalMsg,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message);
+
+      setSuccess("Appointment booked successfully!");
+      setAppointmentDate("");
+      setSelectedDept("");
+      setAdditionalMsg("");
+      fetchAppointments();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = async (appointmentId: number) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/appointments/cancel/${appointmentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) throw new Error("Failed to cancel");
+
+      fetchAppointments();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  if (!user) {
+    return <div className="text-center py-10">Loading...</div>;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-primary mb-4">Book Your Appointment</h1>
-          <p className="text-lg text-gray-600">
-            Schedule your visit with our expert medical professionals. We're here to provide you with the best care.
-          </p>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-primary mb-2">Appointment Booking</h1>
+          <p className="text-gray-600">Welcome, {user.full_name}!</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-2xl font-semibold text-primary mb-4">Why Choose Us?</h2>
-              <ul className="space-y-4">
-                <li className="flex items-start">
-                  <svg className="h-6 w-6 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>Expert medical professionals</span>
-                </li>
-                <li className="flex items-start">
-                  <svg className="h-6 w-6 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>State-of-the-art facilities</span>
-                </li>
-                <li className="flex items-start">
-                  <svg className="h-6 w-6 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>Personalized care</span>
-                </li>
-                <li className="flex items-start">
-                  <svg className="h-6 w-6 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>Flexible scheduling</span>
-                </li>
-              </ul>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Booking Form */}
+          <div className="bg-white p-8 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold text-primary mb-6">New Appointment</h2>
 
-            <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-2xl font-semibold text-primary mb-4">Contact Information</h2>
-              <div className="space-y-4">
-                <p className="flex items-center">
-                  <svg className="h-6 w-6 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  +8801717171717
-                </p>
-                <p className="flex items-center">
-                  <svg className="h-6 w-6 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  appointments@hospital.com
-                </p>
-                <p className="flex items-center">
-                  <svg className="h-6 w-6 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Gulshan, Plot 18, Rd No 71, Dhaka 1212
-
-                </p>
+            <form onSubmit={handleBookAppointment} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Department</label>
+                <select
+                  value={selectedDept}
+                  onChange={(e) => setSelectedDept(e.target.value)}
+                  disabled={loading}
+                  className="w-full border rounded-md px-4 py-2 outline-none"
+                >
+                  <option value="">--Select--</option>
+                  {departments.map((dept: any) => (
+                    <option key={dept.department_id} value={dept.department_id}>
+                      {dept.department_name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Date</label>
+                <input
+                  type="date"
+                  value={appointmentDate}
+                  onChange={(e) => setAppointmentDate(e.target.value)}
+                  disabled={loading}
+                  className="w-full border rounded-md px-4 py-2 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Additional Information</label>
+                <textarea
+                  value={additionalMsg}
+                  onChange={(e) => setAdditionalMsg(e.target.value)}
+                  disabled={loading}
+                  placeholder="Enter additional information"
+                  className="w-full border rounded-md px-4 py-2 outline-none h-20"
+                />
+              </div>
+
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+              {success && <p className="text-green-600 text-sm">{success}</p>}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-full bg-primary py-2 font-medium text-white hover:bg-secondary transition disabled:opacity-50"
+              >
+                {loading ? "Booking..." : "Book Appointment"}
+              </button>
+            </form>
           </div>
 
-          <div>
-            <AppointmentForm />
+          {/* My Appointments */}
+          <div className="bg-white p-8 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold text-primary mb-6">My Appointments</h2>
+
+            {appointments.length === 0 ? (
+              <p className="text-gray-600">No appointments yet</p>
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {appointments.map((apt: any) => (
+                  <div key={apt.appointment_id} className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h3 className="font-bold text-primary">{apt.department_name}</h3>
+                        <p className="text-sm text-gray-600">{apt.appointment_date}</p>
+                      </div>
+                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                        apt.status === "Pending" ? "bg-yellow-100 text-yellow-800" :
+                        apt.status === "Cancelled" ? "bg-red-100 text-red-800" :
+                        "bg-green-100 text-green-800"
+                      }`}>
+                        {apt.status === "Pending" ? "Pending" : apt.status === "Cancelled" ? "Cancelled" : "Completed"}
+                      </span>
+                    </div>
+
+                    {apt.additional_message && (
+                      <p className="text-sm text-gray-600 mb-3">{apt.additional_message}</p>
+                    )}
+
+                    {apt.status === "Pending" && (
+                      <button
+                        onClick={() => handleCancel(apt.appointment_id)}
+                        className="text-red-500 text-sm hover:underline"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Logout Button */}
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => {
+              localStorage.removeItem("user");
+              navigate("/login");
+            }}
+            className="bg-red-500 text-white px-6 py-2 rounded-full hover:bg-red-600"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-export default AppointmentPage; 
+export default AppointmentPage;

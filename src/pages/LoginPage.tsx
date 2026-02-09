@@ -5,6 +5,7 @@ const LoginPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -14,6 +15,9 @@ const LoginPage = () => {
       setError("Please enter username and password");
       return;
     }
+
+    setLoading(true);
+    setError("");
 
     try {
       const res = await fetch("http://localhost:5000/api/auth/login", {
@@ -26,10 +30,17 @@ const LoginPage = () => {
 
       if (!res.ok) throw new Error(data.message);
 
-      alert(`Welcome ${data.user.full_name}`);
-      navigate("/dashboard"); // Example redirect
+      // Successful login
+      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("userId", data.user.user_id.toString());
+      alert(`Welcome ${data.user.full_name}!`);
+      
+      // Force page reload to update header
+      window.location.href = "/";
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -49,28 +60,31 @@ const LoginPage = () => {
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-md border px-4 py-2 outline-none focus:border-primary"
+            disabled={loading}
+            className="w-full rounded-md border px-4 py-2 outline-none focus:border-primary disabled:opacity-50"
           />
           <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border px-4 py-2 outline-none focus:border-primary"
+            disabled={loading}
+            className="w-full rounded-md border px-4 py-2 outline-none focus:border-primary disabled:opacity-50"
           />
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
           <button
             type="submit"
-            className="w-full rounded-full bg-primary py-2 font-medium text-white hover:bg-secondary hover:text-primary transition"
+            disabled={loading}
+            className="w-full rounded-full bg-primary py-2 font-medium text-white hover:bg-secondary hover:text-primary transition disabled:opacity-50"
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-600">
-          Don’t have an account?{" "}
+          Don't have an account?{" "}
           <Link to="/register" className="text-primary font-medium hover:underline">
-            Register
+            Create new account
           </Link>
         </p>
       </div>

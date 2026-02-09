@@ -1,12 +1,28 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, X, LogOut, User } from 'lucide-react';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user is logged in
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+    navigate('/');
   };
 
   return (
@@ -17,8 +33,8 @@ const Header = () => {
           <div className="relative h-8 w-8">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect width="32" height="32" rx="8" fill="#09352e"/>
-              <path d="M16 8V24" stroke="#f8a485" stroke-width="3" stroke-linecap="round"/>
-              <path d="M8 16H24" stroke="#f8a485" stroke-width="3" stroke-linecap="round"/>
+              <path d="M16 8V24" stroke="#f8a485" strokeWidth="3" strokeLinecap="round"/>
+              <path d="M8 16H24" stroke="#f8a485" strokeWidth="3" strokeLinecap="round"/>
             </svg>
           </div>
           <span className="text-xl font-bold">Hospital Button</span>
@@ -44,21 +60,36 @@ const Header = () => {
         </nav>
 
        
-        <div className="hidden lg:block">
+        <div className="hidden lg:flex lg:items-center lg:gap-4">
           <Link
             to="/appointment"
             className="rounded-full border-2 border-secondary bg-transparent px-6 py-2 font-medium text-secondary transition-colors hover:bg-secondary hover:text-primary"
           >
             Book Appointment
           </Link>
-        </div>
-        <div className="hidden lg:block">
-          <Link
-            to="/login"
-            className="rounded-full border-2 border-secondary bg-transparent px-6 py-2 font-medium text-secondary transition-colors hover:bg-secondary hover:text-primary"
-          >
-            Login
-          </Link>
+          
+          {user ? (
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-secondary" />
+                <span className="font-medium text-secondary">{user.full_name}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 rounded-full border-2 border-red-400 bg-transparent px-6 py-2 font-medium text-red-400 transition-colors hover:bg-red-400 hover:text-white"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="rounded-full border-2 border-secondary bg-transparent px-6 py-2 font-medium text-secondary transition-colors hover:bg-secondary hover:text-primary"
+            >
+              Login
+            </Link>
+          )}
         </div>
 
        
@@ -103,6 +134,33 @@ const Header = () => {
                 Book Appointment
               </Link>
             </li>
+            {user ? (
+              <>
+                <li className="flex items-center gap-2 pt-2">
+                  <User className="h-5 w-5 text-secondary" />
+                  <span className="font-medium text-secondary">{user.full_name}</span>
+                </li>
+                <li>
+                  <button
+                    onClick={() => { handleLogout(); toggleMenu(); }}
+                    className="flex items-center gap-2 rounded-full border-2 border-red-400 bg-transparent px-6 py-2 font-medium text-red-400 transition-colors hover:bg-red-400 hover:text-white"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </button>
+                </li>
+              </>
+            ) : (
+              <li>
+                <Link
+                  to="/login"
+                  className="inline-block rounded-full border-2 border-secondary bg-transparent px-6 py-2 font-medium text-secondary transition-colors hover:bg-secondary hover:text-primary"
+                  onClick={toggleMenu}
+                >
+                  Login
+                </Link>
+              </li>
+            )}
           </ul>
         </div>
       )}
